@@ -1,167 +1,41 @@
-import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+# Audio to MP4
 
-const form = document.getElementById('converter-form');
-const audioInput = document.getElementById('audio-input');
-const imageInput = document.getElementById('image-input');
-const imageField = document.getElementById('image-field');
-const bitrateInput = document.getElementById('bitrate');
-const sizeInput = document.getElementById('size');
-const convertButton = document.getElementById('convert-button');
-const statusText = document.getElementById('status');
-const progressBar = document.getElementById('progress-bar');
-const outputList = document.getElementById('output-list');
+A browser-based app that converts audio files to MP4 using FFmpeg WebAssembly (FFmpeg.wasm). It is designed for GitHub Pages, so no backend server is required.
 
-const ffmpeg = new FFmpeg();
-let ffmpegLoaded = false;
+## Features
+- Upload one or more audio files
+- Drag and drop support
+- Convert to MP4 in the browser
+- Audio-only MP4 output
+- Optional black background video
+- Optional still-image background track
+- Download generated MP4 files directly
 
-function setStatus(message) {
-  statusText.textContent = message;
-}
+## Notes
+This app runs in the browser, so it is slower and more memory-intensive than a native command-line ffmpeg conversion. Large files may take longer or run into browser limits.
 
-function setProgress(value) {
-  progressBar.style.width = `${Math.max(0, Math.min(100, value))}%`;
-}
+## Usage
+1. Open the site in a browser.
+2. Select one or more audio files, or drag them onto the page.
+3. Pick the conversion mode.
+4. Click Convert to MP4.
+5. Download the generated MP4 files.
 
-function toggleImageField() {
-  const selectedMode = form.querySelector('input[name="background-type"]:checked').value;
-  imageField.classList.toggle('hidden', selectedMode !== 'image');
-}
+## Deployment
+This project is static and can be published directly to GitHub Pages. No server or backend is needed.
 
-form.querySelectorAll('input[name="background-type"]').forEach((radio) => {
-  radio.addEventListener('change', toggleImageField);
-});
+## Local development
+Because it is static HTML/JavaScript, you can also run it locally with a simple static server if desired:
 
-toggleImageField();
+```bash
+python3 -m http.server 8000
+```
 
-async function loadFfmpeg() {
-  if (ffmpegLoaded) return;
+Then open:
 
-  setStatus('Loading FFmpeg…');
-  setProgress(10);
+```text
+http://localhost:8000
+```
 
-  const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
-
-  ffmpegLoaded = true;
-  setProgress(100);
-  setStatus('FFmpeg ready.');
-}
-
-function downloadLink(filename, url) {
-  const item = document.createElement('div');
-  item.className = 'output-item';
-
-  const label = document.createElement('span');
-  label.textContent = filename;
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.textContent = 'Download';
-
-  item.append(label, link);
-  outputList.appendChild(item);
-}
-
-async function processFile(file, mode, bitrate, size) {
-  const inputName = file.name.replace(/\s+/g, '_');
-  const outputName = inputName.replace(/\.[^/.]+$/, '.mp4');
-
-  await ffmpeg.writeFile(inputName, await fetchFile(file));
-
-  let args = ['-i', inputName, '-vn', '-c:a', 'aac', '-b:a', bitrate, '-movflags', '+faststart', outputName];
-
-  if (mode === 'black') {
-    args = [
-      '-f', 'lavfi',
-      '-i', `color=c=black:s=${size}:r=2`,
-      '-i', inputName,
-      '-c:v', 'libx264',
-      '-tune', 'stillimage',
-      '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac',
-      '-b:a', bitrate,
-      '-shortest',
-      '-movflags', '+faststart',
-      outputName,
-    ];
-  }
-
-  if (mode === 'image') {
-    const coverFile = imageInput.files[0];
-    if (!coverFile) {
-      throw new Error('Please choose a cover image for the image background option.');
-    }
-
-    const coverName = 'cover.jpg';
-    await ffmpeg.writeFile(coverName, await fetchFile(coverFile));
-
-    args = [
-      '-loop', '1',
-      '-framerate', '2',
-      '-i', coverName,
-      '-i', inputName,
-      '-c:v', 'libx264',
-      '-tune', 'stillimage',
-      '-pix_fmt', 'yuv420p',
-      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-      '-c:a', 'aac',
-      '-b:a', bitrate,
-      '-shortest',
-      '-movflags', '+faststart',
-      outputName,
-    ];
-  }
-
-  await ffmpeg.exec(args);
-
-  const data = await ffmpeg.readFile(outputName);
-  const blob = new Blob([data.buffer], { type: 'video/mp4' });
-  const url = URL.createObjectURL(blob);
-  return { filename: outputName, url };
-}
-
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
-
-  const files = [...audioInput.files || []];
-  if (!files.length) {
-    setStatus('Please select at least one audio file.');
-    return;
-  }
-
-  const mode = form.querySelector('input[name="background-type"]:checked').value;
-  const bitrate = bitrateInput.value.trim() || '192k';
-  const size = sizeInput.value.trim() || '1280x720';
-
-  convertButton.disabled = true;
-  outputList.innerHTML = '';
-  setProgress(0);
-  setStatus('Initializing conversion…');
-
-  try {
-    await loadFfmpeg();
-
-    for (let i = 0; i < files.length; i += 1) {
-      const file = files[i];
-      const percent = Math.round((i / files.length) * 100);
-      setProgress(percent);
-      setStatus(`Converting ${i + 1} of ${files.length}: ${file.name}`);
-      const result = await processFile(file, mode, bitrate, size);
-      downloadLink(result.filename, result.url);
-      setProgress(Math.round(((i + 1) / files.length) * 100));
-    }
-
-    setStatus(`Done — ${files.length} file(s) converted.`);
-  } catch (error) {
-    console.error(error);
-    setStatus(error.message || 'Conversion failed. Try a smaller file or different output settings.');
-  } finally {
-    convertButton.disabled = false;
-  }
-});
+## Important limitation
+Browser-based conversion cannot match the full speed and memory of desktop ffmpeg. For very large audio files or many files at once, a native install of ffmpeg is the better option.

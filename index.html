@@ -20,12 +20,18 @@
       </header>
 
       <section class="panel">
-        <form id="converter-form">
-          <label class="field">
-            <span>Audio files</span>
-            <input id="audio-input" type="file" accept="audio/*" multiple required />
-          </label>
+        <div id="drop-zone" class="drop-zone" tabindex="0">
+          <input id="audio-input" type="file" accept="audio/*" multiple hidden />
+          <div class="drop-content">
+            <div class="drop-icon">🎵</div>
+            <p>Drop audio files here</p>
+            <span>or click to choose</span>
+          </div>
+        </div>
 
+        <div id="file-list" class="file-list" aria-live="polite"></div>
+
+        <form id="converter-form">
           <div class="row">
             <label class="field half">
               <span>Bitrate</span>
