@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio to MP4</title>
+    <meta
+      name="description"
+      content="Convert audio files to MP4 directly in your browser using FFmpeg.wasm on GitHub Pages."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">GitHub Pages</p>
+          <h1>Audio to MP4</h1>
+        </div>
+      </header>
+
+      <section class="panel">
+        <form id="converter-form">
+          <label class="field">
+            <span>Audio files</span>
+            <input id="audio-input" type="file" accept="audio/*" multiple required />
+          </label>
+
+          <div class="row">
+            <label class="field half">
+              <span>Bitrate</span>
+              <input id="bitrate" type="text" value="192k" />
+            </label>
+
+            <label class="field half">
+              <span>Black background size</span>
+              <input id="size" type="text" value="1280x720" />
+            </label>
+          </div>
+
+          <fieldset class="field">
+            <legend>Background</legend>
+            <div class="radio-group">
+              <label>
+                <input type="radio" name="background-type" value="audio" checked />
+                Audio-only MP4
+              </label>
+              <label>
+                <input type="radio" name="background-type" value="black" />
+                Solid black video
+              </label>
+              <label>
+                <input type="radio" name="background-type" value="image" />
+                Use cover image
+              </label>
+            </div>
+          </fieldset>
+
+          <label id="image-field" class="field hidden">
+            <span>Cover image</span>
+            <input id="image-input" type="file" accept="image/*" />
+          </label>
+
+          <button id="convert-button" type="submit">Convert to MP4</button>
+        </form>
+      </section>
+
+      <section class="panel status-panel">
+        <h2>Status</h2>
+        <p id="status">Waiting for files…</p>
+        <div class="progress-wrap">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+      </section>
+
+      <section class="panel output-panel">
+        <h2>Downloads</h2>
+        <div id="output-list" class="output-list">
+          <p class="muted">Converted files will appear here.</p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
